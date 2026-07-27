@@ -4,234 +4,159 @@
 //
 //  Created by Lakr Aream on 2022/3/15.
 //
+//  重构：使用 WorkSchedule + EarningsCalculator 统一计算逻辑
+//  增加：跨午夜、加班、节假日支持；下班通知；历史记录；全局快捷键
+//
 
 import AppKit
 import SwiftUI
 
-class Menubar: ObservableObject {
+final class Menubar: ObservableObject {
     static let shared = Menubar()
 
-    @AppStorage("wiki.qaq.workStart")
-    var workStart: Double = 0
+    // MARK: - 配置（单一数据源）
 
-    @AppStorage("wiki.qaq.workEnd")
-    var workEnd: Double = 0
+    @AppStorage("wiki.qaq.workSchedule.v2") private var rawSchedule: String = ""
+    @AppStorage("wiki.qaq.currencyUnit") var currencyUnit: String = "CNY"
+    @AppStorage("wiki.qaq.compactMode") var compactMode: Bool = false
+    @AppStorage("wiki.qaq.notifications.enabled") var notificationsEnabled: Bool = true
+    @AppStorage("wiki.qaq.holiday.enabled") var holidayEnabled: Bool = true
+    @AppStorage("wiki.qaq.globalHotkey.enabled") var globalHotkeyEnabled: Bool = true
+    @AppStorage("wiki.qaq.history.v1") private var rawHistory: String = ""
 
-    @AppStorage("wiki.qaq.monthPaid")
-    var monthPaid: Int = 20000
+    var schedule: WorkSchedule {
+        get {
+            if let data = rawSchedule.data(using: .utf8),
+               let decoded = try? JSONDecoder().decode(WorkSchedule.self, from: data) {
+                return decoded
+            }
+            return WorkSchedule.migrateFromLegacy()
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue),
+                  let str = String(data: data, encoding: .utf8) else { return }
+            rawSchedule = str
+        }
+    }
 
-    @AppStorage("wiki.qaq.dayWorkOfMonth")
-    var dayWorkOfMonth: Int = 20
-
-    @AppStorage("wiki.qaq.isHaveNoonBreak")
-    var isHaveNoonBreak: Bool = false
-
-    @AppStorage("wiki.qaq.noonBreakStartTimeStamp")
-    var noonBreakStartTimeStamp: Double = 0
-
-    @AppStorage("wiki.qaq.noonBreakEndTimeStamp")
-    var noonBreakEndTimeStamp: Double = 0
-
-    @AppStorage("wiki.qaq.currencyUnit")
-    var currencyUnit: String = "RMB"
-
-    @AppStorage("wiki.qaq.compactMode")
-    var compactMode: Bool = false
+    // MARK: - 运行时状态
 
     @Published var menubarRunning = false
     @Published var todayPercent: Double = 0
-    @Published var todayEarn: Int = 0
+    @Published var todayEarn: Double = 0
+    @Published var todayOvertimeSeconds: Int = 0
+    @Published var isHoliday: Bool = false
 
     var popover: NSPopover
     var statusItem: NSStatusItem?
     var eventMonitor: EventMonitor?
+    var hotkey: GlobalHotkey?
 
     let timer: Timer!
+
+    // 通知去重
+    private var lastOvertimeNotified: Bool = false
+    private var lastOffworkNotifiedDate: String = ""
+    private var lastHolidayNotifiedDate: String = ""
 
     private init() {
         let buildPopover = NSPopover()
         popover = buildPopover
         let view = MenubarView()
         buildPopover.contentViewController = NSHostingController(rootView: view)
-        timer = Timer(timeInterval: 0.25, repeats: true) { _ in
-            Menubar.shared.updateButtonText()
+        timer = Timer(timeInterval: 1.0, repeats: true) { _ in
+            Menubar.shared.tick()
         }
-        eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown], handler: mouseEventHandler)
+        eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown], handler: { event in
+            Menubar.shared.mouseEventHandler(event)
+        })
         RunLoop.current.add(timer, forMode: .common)
     }
 
+    // MARK: - 公共 API
+
+    @MainActor
     func run() {
         assert(Thread.isMainThread)
-        guard !menubarRunning else {
-            return
-        }
-        debugPrint(#function)
+        guard !menubarRunning else { return }
+        AppLog.debug("Menubar.run")
         popover.close()
-        let statusItem = NSStatusBar
-            .system
-            .statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.target = self
-        statusItem.button?.action = #selector(togglePopover(sender:))
-        if let origFont = statusItem.button?.font {
-            statusItem.button?.font = .monospacedSystemFont(ofSize: origFont.pointSize, weight: .regular)
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        item.button?.target = self
+        item.button?.action = #selector(togglePopover(sender:))
+        if let origFont = item.button?.font {
+            item.button?.font = .monospacedSystemFont(ofSize: origFont.pointSize, weight: .regular)
         }
-        self.statusItem = statusItem
+        // 设置状态栏图标（跟 app 主图标一致 — 金币 + 趋势线）
+        applyStatusBarIcon(to: item.button)
+        self.statusItem = item
         menubarRunning = true
-        updateButtonText()
+        NotificationManager.shared.ensureAuthorization()
+        registerHotkey()
+        tick()
+    }
+
+    /// 把 app 主 logo 渲染成 macOS 状态栏图标
+    /// 状态栏推荐尺寸 18x18 @1x / 36x36 @2x
+    @MainActor
+    private func applyStatusBarIcon(to button: NSStatusBarButton?) {
+        guard let button = button else { return }
+        // 优先使用 BrandLogo Canvas（跟界面/logo 完全一致的金币 + 趋势线）
+        if let cgImage = renderBrandLogoCG(size: 36) {
+            let img = NSImage(cgImage: cgImage, size: NSSize(width: 18, height: 18))
+            img.isTemplate = false  // 保持彩色（金币是金色，不能被系统染黑）
+            button.image = img
+            button.imagePosition = .imageLeft
+            button.imageScaling = .scaleProportionallyDown
+        } else if let png = AppIconLoader.loadIcon() {
+            // 回退：bundle 里的 PNG
+            png.size = NSSize(width: 18, height: 18)
+            button.image = png
+            button.imagePosition = .imageLeft
+        }
+    }
+
+    /// 用 ImageRenderer 把 BrandLogo 视图渲染成 CGImage（与界面 logo 100% 一致）
+    @MainActor
+    private func renderBrandLogoCG(size: CGFloat) -> CGImage? {
+        let logo = BrandLogo(size: size, showRing: false, progress: 0)
+            .frame(width: size, height: size)
+        let renderer = ImageRenderer(content: logo)
+        renderer.scale = 2.0
+        renderer.proposedSize = ProposedViewSize(width: size, height: size)
+        return renderer.cgImage
     }
 
     func stop() {
         assert(Thread.isMainThread)
-        guard menubarRunning else {
-            return
-        }
-        debugPrint(#function)
+        guard menubarRunning else { return }
+        AppLog.debug("Menubar.stop")
         popover.close()
         if let statusItem = statusItem {
             NSStatusBar.system.removeStatusItem(statusItem)
         }
         statusItem = nil
         menubarRunning = false
-    }
-
-    func updateButtonText() {
-        guard let statusItem = statusItem else {
-            return
-        }
-
-        let workStartDate = Date(timeIntervalSince1970: workStart)
-        let calendar = Calendar.current
-        let nowDate = Date()
-        let todayStart = DateComponents(
-            calendar: calendar,
-            year: calendar.component(.year, from: nowDate),
-            month: calendar.component(.month, from: nowDate),
-            day: calendar.component(.day, from: nowDate),
-            hour: calendar.component(.hour, from: workStartDate),
-            minute: calendar.component(.minute, from: workStartDate),
-            second: 0
-        ).date
-        guard let todayStart = todayStart else {
-            statusItem.button?.title = NSLocalizedString("💰 data error", comment: "")
-            return
-        }
-
-        let passedTimeInterval: TimeInterval = obtainPassedTimeInterval()
-        let totalWorkTimeInterval: TimeInterval = obtainTotalWorkTimeInterval()
-        var percent = passedTimeInterval / totalWorkTimeInterval
-        if percent < 0 { percent = 0 }
-        if percent > 1 { percent = 1 }
-        let todayMake = Double(monthPaid / dayWorkOfMonth)
-        let money = percent * todayMake
-
-        if #available(macOS 12.0, *) {
-            debugPrint("===========")
-            debugPrint("today start at: ", todayStart.formatted())
-            debugPrint("current timestamp: ", nowDate.formatted())
-            debugPrint("seconds started: ", TimeInterval(passedTimeInterval).formatted())
-            debugPrint("today will earn: ", todayMake)
-            debugPrint("percent of today: ", percent)
-            debugPrint("current made: ", money)
-        }
-
-        todayPercent = percent
-        todayEarn = Int(todayMake)
-        var title = ""
-
-        if percent <= 0 {
-            title = "Not working yet".localized
-        } else if percent >= 1 {
-            title = String(format: NSLocalizedString("💰 %.0f available", comment: ""), money)
-        } else {
-            if compactMode {
-                title = String(format: NSLocalizedString("💰 %.2f yuan", comment: ""), money, currencyUnit)
-            } else {
-                title = String(format: NSLocalizedString("💰 You have earned %.2f %@ today", comment: ""), money, currencyUnit)
-            }
-        }
-        statusItem.button?.title = title
-    }
-
-    private func obtainPassedTimeInterval() -> TimeInterval {
-        /*
-         如果有午休 四个时间点 划分为5个时间区域点
-         if now <= workStartDate So passed < 0
-         if workStartDate < now && now < noonBreakStartDate So passed = now - workStartDate
-         if noonBreakStartDate <= now && now <= noonBreakEndDate So passed = noonBreakStartDate - workStartDate
-         if noonBreakEndDate < now && now < workEndDate So passed = (now - noonBreakEndDate) + (noonBreakStartDate - workStartDate)
-         if workEndDate <= now So passed = now - workStartDate
-         */
-
-        /*
-         如果没有午休 两个时间点 划分为3个时间区域点
-         if now < workStartDate So passed < 0
-         if workStartDate < now && now < workEndDate So passed = now - workStartDate
-         if workEndDate <= now So passed = now - workStartDate
-         */
-        let workStartDate = Date(timeIntervalSince1970: workStart)
-        let workEndDate = Date(timeIntervalSince1970: workEnd)
-        let noonBreakStartDate = Date(timeIntervalSince1970: noonBreakStartTimeStamp)
-        let noonBreakEndDate = Date(timeIntervalSince1970: noonBreakEndTimeStamp)
-        let nowDate = Date()
-
-        var passedTimeInterval: TimeInterval = 0.0
-        let timeIntervalFromWorkStartDate: TimeInterval = nowDate.timeIntervalSince(workStartDate)
-        let beforeWorkStartDateFlag: Bool = timeIntervalFromWorkStartDate <= 0
-        let betweenWorkStartDateAndNoonBreakStartDate: Bool = timeIntervalFromWorkStartDate > 0 && nowDate.timeIntervalSince(noonBreakStartDate) < 0
-        let betweenNoonBreakStartDateAndNoonBreakEndDate: Bool = nowDate.timeIntervalSince(noonBreakStartDate) >= 0 && nowDate.timeIntervalSince(noonBreakEndDate) <= 0
-        let betweenNoonBreakEndDateAndWorkEndDate: Bool = nowDate.timeIntervalSince(noonBreakEndDate) > 0 && nowDate.timeIntervalSince(workEndDate) < 0
-        let betweenWorkStartDateAndWorkEndDate: Bool = timeIntervalFromWorkStartDate > 0 && nowDate.timeIntervalSince(workEndDate) < 0
-
-        if isHaveNoonBreak {
-            if beforeWorkStartDateFlag {
-                passedTimeInterval = 0.0
-            } else if betweenWorkStartDateAndNoonBreakStartDate {
-                passedTimeInterval = timeIntervalFromWorkStartDate
-            } else if betweenNoonBreakStartDateAndNoonBreakEndDate {
-                passedTimeInterval = noonBreakStartDate.timeIntervalSince(workStartDate)
-            } else if betweenNoonBreakEndDateAndWorkEndDate {
-                passedTimeInterval = nowDate.timeIntervalSince(noonBreakEndDate) + noonBreakStartDate.timeIntervalSince(workStartDate)
-            } else {
-                passedTimeInterval = timeIntervalFromWorkStartDate
-            }
-        } else {
-            if beforeWorkStartDateFlag {
-                passedTimeInterval = 0.0
-            } else if betweenWorkStartDateAndWorkEndDate {
-                passedTimeInterval = timeIntervalFromWorkStartDate
-            } else {
-                passedTimeInterval = timeIntervalFromWorkStartDate
-            }
-        }
-        return passedTimeInterval
-    }
-
-    private func obtainTotalWorkTimeInterval() -> TimeInterval {
-        let workStartDate = Date(timeIntervalSince1970: workStart)
-        let workEndDate = Date(timeIntervalSince1970: workEnd)
-        let noonBreakStartDate = Date(timeIntervalSince1970: noonBreakStartTimeStamp)
-        let noonBreakEndDate = Date(timeIntervalSince1970: noonBreakEndTimeStamp)
-        var totalWorkTimeInterval: TimeInterval = 1.0
-        if isHaveNoonBreak {
-            // interval = (workEndDate - noonBreakEndDate) + (noonBreakStartDate - workStartDate)
-            totalWorkTimeInterval = workEndDate.timeIntervalSince(noonBreakEndDate) + noonBreakStartDate.timeIntervalSince(workStartDate)
-        } else {
-            // interval = workEndDate - workStartDate
-            totalWorkTimeInterval = workEndDate.timeIntervalSince(workStartDate)
-        }
-        return totalWorkTimeInterval
+        hotkey?.unregister()
+        hotkey = nil
     }
 
     func reload() {
-        debugPrint("work start \(workStart)")
-        debugPrint("work end \(workEnd)")
-        debugPrint("month paid \(monthPaid)")
-        debugPrint("work \(dayWorkOfMonth) a month")
+        // 触发 tick
+        tick()
+    }
+
+    /// 读取历史快照（用于导出）
+    func snapshotHistory() -> [DailyEarningRecord]? {
+        guard let data = rawHistory.data(using: .utf8),
+              let arr = try? JSONDecoder().decode([DailyEarningRecord].self, from: data)
+        else { return nil }
+        return arr.sorted { $0.dateKey < $1.dateKey }
     }
 
     func showPopover(_: AnyObject) {
-        if let statusBarButton = statusItem?.button {
-            popover.show(relativeTo: statusBarButton.bounds, of: statusBarButton, preferredEdge: NSRectEdge.maxY)
+        if let button = statusItem?.button {
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: NSRectEdge.maxY)
             eventMonitor?.start()
         }
     }
@@ -255,32 +180,174 @@ class Menubar: ObservableObject {
             showPopover(sender)
         }
     }
+
+    /// 打开主窗口（菜单栏点击双动作）
+    func openMainWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        for window in NSApp.windows where window.canBecomeMain {
+            window.makeKeyAndOrderFront(nil)
+            return
+        }
+    }
+
+    // MARK: - 定时刷新
+
+    func tick() {
+        let now = Date()
+        let holidays = holidayEnabled ? HolidayCalendar(customHolidays: schedule.customHolidays) : nil
+        let result = EarningsCalculator.compute(
+            schedule: schedule,
+            now: now,
+            holidays: holidays
+        )
+
+        let isRest = holidays?.isRestDay(now) ?? false
+        isHoliday = isRest
+
+        // 进度百分比：节假日显示 100% 不变（"今天挣满啦"）
+        let percent: Double
+        if isRest {
+            percent = 1.0
+        } else {
+            percent = max(0, min(1, result.percent))
+        }
+        todayPercent = percent
+        todayEarn = isRest ? result.dailyEarnings : result.earned
+        todayOvertimeSeconds = result.overtimeSeconds
+
+        updateButtonText()
+        handleNotifications(result: result, isRest: isRest)
+        saveHistoryIfNeeded(result: result, isRest: isRest)
+    }
+
+    private func updateButtonText() {
+        guard let button = statusItem?.button else { return }
+
+        let title: String
+        if isHoliday {
+            title = " " + NSLocalizedString("menubar.holiday", comment: "")
+        } else if todayPercent <= 0 {
+            title = " " + NSLocalizedString("menubar.notStarted", comment: "")
+        } else if todayPercent >= 1 {
+            title = " " + String(format: NSLocalizedString("menubar.available", comment: ""), todayEarn, currencyUnit)
+        } else {
+            if compactMode {
+                title = " " + String(format: NSLocalizedString("menubar.earnedCompact", comment: ""), todayEarn, currencyUnit)
+            } else {
+                title = " " + String(format: NSLocalizedString("menubar.earnedLong", comment: ""), todayEarn, currencyUnit)
+            }
+        }
+        button.title = title
+    }
+
+    private func handleNotifications(result: EarningResult, isRest: Bool) {
+        guard notificationsEnabled, menubarRunning else { return }
+        let todayKey = DailyEarningRecord.todayKey()
+
+        // 下班通知
+        if result.completed, !isRest, lastOffworkNotifiedDate != todayKey {
+            lastOffworkNotifiedDate = todayKey
+            NotificationManager.shared.notifyOffWork(earned: result.earned, currencyUnit: currencyUnit)
+        }
+
+        // 加班通知（首次进入加班时）
+        if result.overtimeSeconds > 0, !lastOvertimeNotified {
+            lastOvertimeNotified = true
+            NotificationManager.shared.notifyOvertimeStart(earned: result.earned, currencyUnit: currencyUnit)
+        } else if result.overtimeSeconds == 0 {
+            lastOvertimeNotified = false
+        }
+
+        // 节假日通知
+        if isRest, lastHolidayNotifiedDate != todayKey {
+            lastHolidayNotifiedDate = todayKey
+            NotificationManager.shared.notifyHoliday(name: "Holiday".localized)
+        }
+    }
+
+    private func saveHistoryIfNeeded(result: EarningResult, isRest: Bool) {
+        let key = DailyEarningRecord.todayKey()
+        var records: [DailyEarningRecord] = {
+            guard let data = rawHistory.data(using: .utf8),
+                  let arr = try? JSONDecoder().decode([DailyEarningRecord].self, from: data) else {
+                return []
+            }
+            return arr
+        }()
+
+        let record = DailyEarningRecord(
+            dateKey: key,
+            earned: result.earned,
+            dayEarnings: result.dailyEarnings,
+            overtimeSeconds: result.overtimeSeconds,
+            netWorkSeconds: result.passedWorkSeconds,
+            isRestDay: isRest
+        )
+
+        if let idx = records.firstIndex(where: { $0.dateKey == key }) {
+            records[idx] = record
+        } else {
+            records.append(record)
+        }
+
+        // 清理 365 天前（最多保留 1 年数据）
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        fmt.timeZone = TimeZone.current
+        let cutoffKey = fmt.string(from: Calendar.current.date(byAdding: .day, value: -HistoryRetentionDays, to: Date()) ?? Date())
+        records = records
+            .filter { $0.dateKey >= cutoffKey }
+            .sorted { $0.dateKey < $1.dateKey }
+        // 硬上限：按日期去重后不超过 1.5x 限额（防御异常日期）
+        if records.count > HistoryRetentionDays + 30 {
+            records = Array(records.suffix(HistoryRetentionDays))
+        }
+
+        if let data = try? JSONEncoder().encode(records),
+           let str = String(data: data, encoding: .utf8) {
+            rawHistory = str
+        }
+    }
+
+    // MARK: - 全局快捷键
+
+    private func registerHotkey() {
+        guard globalHotkeyEnabled else { return }
+        if hotkey == nil {
+            hotkey = GlobalHotkey(keyCode: 0x2D, modifiers: [.option, .command]) { [weak self] in
+                // Cmd+Opt+0 切换主窗口
+                self?.openMainWindow()
+            }
+        }
+        hotkey?.register()
+    }
 }
 
+// MARK: - EventMonitor（修复 force cast）
+
 extension Menubar {
-    class EventMonitor {
+    final class EventMonitor {
         private var monitor: Any?
         private let mask: NSEvent.EventTypeMask
         private let handler: (NSEvent?) -> Void
 
-        public init(mask: NSEvent.EventTypeMask, handler: @escaping (NSEvent?) -> Void) {
+        init(mask: NSEvent.EventTypeMask, handler: @escaping (NSEvent?) -> Void) {
             self.mask = mask
             self.handler = handler
         }
 
-        deinit {
-            stop()
+        deinit { stop() }
+
+        func start() {
+            if monitor != nil { stop() }
+            monitor = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: handler)
         }
 
-        public func start() {
-            monitor = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: handler) as! NSObject
-        }
-
-        public func stop() {
-            if monitor != nil {
-                NSEvent.removeMonitor(monitor!)
-                monitor = nil
+        func stop() {
+            if let m = monitor {
+                NSEvent.removeMonitor(m)
             }
+            monitor = nil
         }
     }
 }

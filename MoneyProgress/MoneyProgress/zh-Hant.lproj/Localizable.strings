@@ -114,3 +114,105 @@
 
 /* No comment provided by engineer. */
 "💰 You have earned %.2f %@ today" = "💰 您今天已賺 %.2f %@";
+
+/* New features */
+"Holiday today" = "🎉 節假日";
+"💰 %.2f %@ available" = "💰 %.2f %@ 到手";
+"💰 %.2f %@" = "💰 %.2f %@";
+"💼 加班 %d h %d min" = "💼 加班 %d h %d min";
+"💼 加班 %.1fx（超 %d 小时）" = "💼 加班 %.1fx（超 %d 小時）";
+"💼 启用加班" = "💼 啟用加班";
+"💰 下班啦" = "💰 下班啦";
+"今日已挣 %.2f %@" = "今日已賺 %.2f %@";
+"💼 开始加班" = "💼 開始加班";
+"基础工时已完成，当前累计 %.2f %@，按加班费率计算中" = "基礎工時已完成，當前累計 %.2f %@，按加班費率計算中";
+"🎉 节假日快乐！" = "🎉 節假日快樂！";
+"今天是 %@，好好休息！" = "今天是 %@，好好休息！";
+"🌙 跨午夜班次" = "🌙 跨午夜班次";
+"🌙 跨午夜" = "🌙 跨午夜";
+"Holiday" = "節假日";
+"打开主窗口" = "打開主視窗";
+"退出" = "退出";
+"历史" = "歷史";
+"📊 历史统计" = "📊 歷史統計";
+"累计" = "累計";
+"日均" = "日均";
+"峰值" = "峰值";
+"加班" = "加班";
+"暂无数据，运行应用后会自动累计" = "暫無資料，運行後會自動累計";
+"📝 近期记录" = "📝 近期記錄";
+"🎉 休息日" = "🎉 休息日";
+"search (code/name/country/number)" = "搜尋（代碼/名稱/國家/編號）";
+"未找到匹配项" = "未找到符合項";
+"🔔 通知" = "🔔 通知";
+"🎉 节假日排除" = "🎉 節假日排除";
+"阈值" = "閾值";
+
+/* UI 狀態 */
+"ui.paused" = "已暫停";
+"ui.holiday" = "節假日";
+"ui.notStarted" = "未開工";
+"ui.nightMode" = "夜班模式";
+
+/* 數據指標 */
+"metric.target" = "今日目標";
+"metric.hourly" = "時薪";
+"metric.perMinute" = "分薪";
+"metric.perSecond" = "秒薪";
+"metric.overtimeRate" = "加班費率";
+"metric.midnight" = "跨午夜班次";
+
+/* 功能開關 */
+"feature.notify" = "通知";
+"feature.holiday" = "節假日";
+"feature.compact" = "緊湊";
+"feature.launchAtLogin" = "開機啟動";
+"feature.holidayList" = "節假日表";
+"feature.export" = "匯出";
+"feature.exportHelp" = "匯出歷史記錄 CSV 到桌面";
+
+/* 班次模板 */
+"shift.standard" = "朝九晚五";
+"shift.996" = "996 (9-21)";
+"shift.995" = "995 (9-21)";
+"shift.swing" = "中班 (15-24)";
+"shift.night" = "夜班 (22-06)";
+"shift.partTime" = "兼職 (14-18)";
+
+/* 節假日編輯器 */
+"ui.single" = "單個日期";
+"ui.dateRange" = "日期範圍";
+"ui.restDay" = "休息日";
+"ui.workDay" = "補班日";
+"ui.add" = "添加";
+"ui.clearAll" = "清空自定義";
+"ui.totalCustom" = "共 %d 個自定義";
+"ui.added" = "已添加";
+"ui.emptyCustom" = "暫未添加自定義節假日";
+"ui.holidayHelp" = "法定節假日已自動包含，可在主視窗關閉「節假日排除」以禁用";
+
+"ui.close" = "關閉";
+"ui.start" = "起始";
+"ui.rangeHint" = "範圍將自動展開為多天";
+"ui.title.customHolidays" = "自定義節假日";
+
+"ui.title.goals" = "目標 / 里程碑";
+"goal.intro" = "設定目標，每天看見進度。完成度 100% 時會有驚喜🎉";
+"goal.monthly" = "月度收入目標";
+"goal.monthlyPlaceholder" = "例如 25000";
+"goal.dailyHint" = "約等於每天 %@ 元（按 %d 工作日）";
+"goal.streak" = "連續工作日目標（Streak）";
+"goal.streakPlaceholder" = "例如 30";
+"goal.days" = "天";
+"goal.streakHint" = "連續 N 天工作日打卡";
+"goal.tip" = "目標可獨立設置；月度目標除以工作日得每日目標。";
+
+"report.title" = "本月收入報告";
+"report.total" = "總收入";
+"report.workDays" = "工作日";
+"report.avgDaily" = "日均";
+"report.peak" = "峰值日";
+"report.overtime" = "加班總計：";
+"report.restDays" = "休息日：";
+"report.empty" = "本月暫無資料";
+

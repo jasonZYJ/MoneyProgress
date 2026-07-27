@@ -9,13 +9,13 @@ import Foundation
 
 var currencyModels: [CurrencyModel] = {
     let fn = "ISO_4217_Currency _Codes.json"
-    debugPrint("loading items at \(fn)")
+    AppLog.debug("loading items at \(fn)")
     let decoder = JSONDecoder()
     guard let file = Bundle.main.url(forResource: fn, withExtension: nil),
           let data = try? Data(contentsOf: file),
           let values = try? decoder.decode([OptionalCurrencyModel].self, from: data)
     else {
-        print("failed to load json file")
+        AppLog.error("failed to load json file: \(fn)")
         /*
          ▿ OptionalCurrencyModel
            - id : nil

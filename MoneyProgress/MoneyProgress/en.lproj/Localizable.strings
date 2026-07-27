@@ -114,3 +114,113 @@
 
 /* No comment provided by engineer. */
 "💰 You have earned %.2f %@ today" = "💰 You have earned %.2f %@ today";
+
+/* New features */
+"Holiday today" = "🎉 Holiday";
+"💰 %.2f %@ available" = "💰 %.2f %@ available";
+"💰 %.2f %@" = "💰 %.2f %@";
+"💼 加班 %d h %d min" = "💼 Overtime %d h %d min";
+"💼 加班 %.1fx（超 %d 小时）" = "💼 Overtime %.1fx (over %d hours)";
+"💼 启用加班" = "💼 Enable Overtime";
+"💰 下班啦" = "💰 Off work";
+"今日已挣 %.2f %@" = "Earned %.2f %@ today";
+"💼 开始加班" = "💼 Overtime started";
+"基础工时已完成，当前累计 %.2f %@，按加班费率计算中" = "Base hours completed, currently %.2f %@, calculating at overtime rate";
+"🎉 节假日快乐！" = "🎉 Happy Holiday!";
+"今天是 %@，好好休息！" = "Today is %@, take a rest!";
+"🌙 跨午夜班次" = "🌙 Crosses midnight";
+"🌙 跨午夜" = "🌙 Crosses midnight";
+"Holiday" = "Holiday";
+"打开主窗口" = "Open main window";
+"退出" = "Quit";
+"历史" = "History";
+"📊 历史统计" = "📊 History";
+"累计" = "Total";
+"日均" = "Daily Avg";
+"峰值" = "Peak";
+"加班" = "OT";
+"暂无数据，运行应用后会自动累计" = "No data yet, run the app to accumulate";
+"📝 近期记录" = "📝 Recent";
+"🎉 休息日" = "🎉 Rest day";
+"search (code/name/country/number)" = "search (code/name/country/number)";
+"未找到匹配项" = "No matches found";
+"🔔 通知" = "🔔 Notifications";
+"🎉 节假日排除" = "🎉 Exclude holidays";
+"阈值" = "Threshold";
+
+/* UI 状态 */
+"ui.paused" = "Paused";
+"ui.holiday" = "Holiday";
+"ui.notStarted" = "Not Started";
+"ui.nightMode" = "Night Mode";
+
+/* 数据指标 */
+"metric.target" = "Today Target";
+"metric.hourly" = "Hourly";
+"metric.perMinute" = "Per Minute";
+"metric.perSecond" = "Per Second";
+"metric.overtimeRate" = "Overtime Rate";
+"metric.midnight" = "Overnight Shift";
+
+/* 功能开关 */
+"feature.notify" = "Notify";
+"feature.holiday" = "Holiday";
+"feature.compact" = "Compact";
+"feature.launchAtLogin" = "Launch at Login";
+"feature.holidayList" = "Holidays";
+"feature.export" = "Export";
+"feature.exportHelp" = "Export history CSV to Desktop";
+
+/* 班次模板 */
+"shift.standard" = "Standard (9-18)";
+"shift.996" = "996 (9-21)";
+"shift.995" = "995 (9-21)";
+"shift.swing" = "Swing (15-24)";
+"shift.night" = "Night (22-06)";
+"shift.partTime" = "Part-Time (14-18)";
+
+/* 节假日编辑器 */
+"ui.single" = "Single Date";
+"ui.dateRange" = "Date Range";
+"ui.restDay" = "Rest Day";
+"ui.workDay" = "Work Day";
+"ui.add" = "Add";
+"ui.clearAll" = "Clear All";
+"ui.totalCustom" = "%d custom total";
+"ui.added" = "Added";
+"ui.emptyCustom" = "No custom holidays yet";
+"ui.holidayHelp" = "Official holidays are included automatically. Toggle 'Holiday' off in main view to disable.";
+
+"ui.close" = "Close";
+"ui.start" = "Start";
+"ui.rangeHint" = "Range will be expanded to multiple days";
+"ui.title.customHolidays" = "Custom Holidays";
+
+"ui.title.goals" = "Goals / Milestones";
+"goal.intro" = "Set a target and watch your progress every day. Hit 100% for a surprise 🎉";
+"goal.monthly" = "Monthly Income Goal";
+"goal.monthlyPlaceholder" = "e.g. 25000";
+"goal.dailyHint" = "≈ %.0f per day (over %d workdays)";
+"goal.streak" = "Workday Streak Goal";
+"goal.streakPlaceholder" = "e.g. 30";
+"goal.days" = "days";
+"goal.streakHint" = "Work N consecutive workdays";
+"goal.tip" = "Goals are independent; monthly ÷ workdays = daily.";
+
+"report.title" = "Monthly Income Report";
+"report.total" = "Total";
+"report.workDays" = "Workdays";
+"report.avgDaily" = "Daily Avg";
+"report.peak" = "Peak Day";
+"report.overtime" = "Overtime: ";
+"report.restDays" = "Rest days: ";
+"report.empty" = "No data this month";
+
+/* Status bar (no emoji — pairs with logo) */
+"menubar.holiday" = "Holiday";
+"menubar.notStarted" = "Not working yet";
+"menubar.earnedFull" = "Earned %.2f %@ today";
+"menubar.earnedCompact" = "%.2f %@";
+"menubar.earnedLong" = "Earned %.2f %@ today";
+"menubar.available" = "%.2f %@ available";
+

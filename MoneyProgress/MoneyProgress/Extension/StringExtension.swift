@@ -1,6 +1,6 @@
 //
 //  StringExtension.swift
-//  钱条
+//  薪辛
 //
 //  Created by lialong on 18/03/2022.
 //

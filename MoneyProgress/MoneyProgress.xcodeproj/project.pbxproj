@@ -24,7 +24,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		5005054E27DF837900B04FC9 /* 钱条.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "钱条.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5005054E27DF837900B04FC9 /* 薪辛.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "薪辛.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5005055127DF837900B04FC9 /* MoneyProgressApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyProgressApp.swift; sourceTree = "<group>"; };
 		5005055327DF837900B04FC9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5005055527DF837A00B04FC9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -145,12 +145,12 @@
 			);
 			dependencies = (
 			);
-			name = "钱条";
+			name = "薪辛";
 			packageProductDependencies = (
 				5005056227DF879300B04FC9 /* Colorful */,
 			);
-			productName = MoneyProgress;
-			productReference = 5005054E27DF837900B04FC9 /* 钱条.app */;
+			productName = Earnest;
+			productReference = 5005054E27DF837900B04FC9 /* 薪辛.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -376,7 +376,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MoneyProgress/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "钱条";
+				INFOPLIST_KEY_CFBundleDisplayName = "薪辛";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2022 Lakr Aream. All rights reserved.";
 				INFOPLIST_KEY_UISupportsDocumentBrowser = NO;
@@ -386,7 +386,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.MoneyProgress;
+				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.Earnest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -409,7 +409,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MoneyProgress/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "钱条";
+				INFOPLIST_KEY_CFBundleDisplayName = "薪辛";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2022 Lakr Aream. All rights reserved.";
 				INFOPLIST_KEY_UISupportsDocumentBrowser = NO;
@@ -419,7 +419,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.MoneyProgress;
+				PRODUCT_BUNDLE_IDENTIFIER = wiki.qaq.Earnest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -438,7 +438,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		5005055D27DF837A00B04FC9 /* Build configuration list for PBXNativeTarget "钱条" */ = {
+		5005055D27DF837A00B04FC9 /* Build configuration list for PBXNativeTarget "薪辛" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				5005055E27DF837A00B04FC9 /* Debug */,
