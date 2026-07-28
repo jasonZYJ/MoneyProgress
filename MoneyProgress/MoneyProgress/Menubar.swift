@@ -51,6 +51,7 @@ final class Menubar: ObservableObject {
     var statusItem: NSStatusItem?
     var eventMonitor: EventMonitor?
     var hotkey: GlobalHotkey?
+    private let iconAnimator = StatusBarIconAnimator()
 
     let timer: Timer!
 
@@ -87,8 +88,11 @@ final class Menubar: ObservableObject {
         if let origFont = item.button?.font {
             item.button?.font = .monospacedSystemFont(ofSize: origFont.pointSize, weight: .regular)
         }
-        // 设置状态栏图标（跟 app 主图标一致 — 金币 + 趋势线）
-        applyStatusBarIcon(to: item.button)
+        // 设置状态栏图标（静态兜底），然后启动动画
+        applyStaticIcon()
+        if let button = item.button {
+            iconAnimator.start(with: button)
+        }
         self.statusItem = item
         menubarRunning = true
         NotificationManager.shared.ensureAuthorization()
@@ -96,20 +100,17 @@ final class Menubar: ObservableObject {
         tick()
     }
 
-    /// 把 app 主 logo 渲染成 macOS 状态栏图标
-    /// 状态栏推荐尺寸 18x18 @1x / 36x36 @2x
+    /// 静态图标兜底（动画启动前使用）
     @MainActor
-    private func applyStatusBarIcon(to button: NSStatusBarButton?) {
-        guard let button = button else { return }
-        // 优先使用 BrandLogo Canvas（跟界面/logo 完全一致的金币 + 趋势线）
+    private func applyStaticIcon() {
+        guard let button = statusItem?.button else { return }
         if let cgImage = renderBrandLogoCG(size: 36) {
             let img = NSImage(cgImage: cgImage, size: NSSize(width: 18, height: 18))
-            img.isTemplate = false  // 保持彩色（金币是金色，不能被系统染黑）
+            img.isTemplate = false
             button.image = img
             button.imagePosition = .imageLeft
             button.imageScaling = .scaleProportionallyDown
         } else if let png = AppIconLoader.loadIcon() {
-            // 回退：bundle 里的 PNG
             png.size = NSSize(width: 18, height: 18)
             button.image = png
             button.imagePosition = .imageLeft
@@ -127,10 +128,12 @@ final class Menubar: ObservableObject {
         return renderer.cgImage
     }
 
+    @MainActor
     func stop() {
         assert(Thread.isMainThread)
         guard menubarRunning else { return }
         AppLog.debug("Menubar.stop")
+        iconAnimator.stop()
         popover.close()
         if let statusItem = statusItem {
             NSStatusBar.system.removeStatusItem(statusItem)
